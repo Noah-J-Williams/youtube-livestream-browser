@@ -52,22 +52,27 @@ export function LayoutGrid({ streams, layout, onLayoutChange, onRemove, onPrimar
 
   useEffect(() => {
     if (!active) return;
+    const currentActive = active;
     function onPointerMove(event: PointerEvent) {
       event.preventDefault();
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const columnWidth = rect.width / GRID_COLUMNS;
-      const deltaCols = Math.round((event.clientX - active.startX) / columnWidth);
-      const deltaRows = Math.round((event.clientY - active.startY) / ROW_HEIGHT);
+      const deltaCols = Math.round((event.clientX - currentActive.startX) / columnWidth);
+      const deltaRows = Math.round((event.clientY - currentActive.startY) / ROW_HEIGHT);
       const nextLayout = layout.map((item) => {
-        if (item.id !== active.id) return item;
-        if (active.mode === "move") {
-          const nextX = clamp(active.original.x + deltaCols, 0, GRID_COLUMNS - item.w);
-          const nextY = Math.max(0, active.original.y + deltaRows);
+        if (item.id !== currentActive.id) return item;
+        if (currentActive.mode === "move") {
+          const nextX = clamp(currentActive.original.x + deltaCols, 0, GRID_COLUMNS - item.w);
+          const nextY = Math.max(0, currentActive.original.y + deltaRows);
           return { ...item, x: nextX, y: nextY };
         }
-        const nextW = clamp(active.original.w + deltaCols, 2, GRID_COLUMNS - active.original.x);
-        const nextH = Math.max(2, active.original.h + deltaRows);
+        const nextW = clamp(
+          currentActive.original.w + deltaCols,
+          2,
+          GRID_COLUMNS - currentActive.original.x,
+        );
+        const nextH = Math.max(2, currentActive.original.h + deltaRows);
         return { ...item, w: nextW, h: nextH };
       });
       onLayoutChange(normalizeLayout(nextLayout));
