@@ -1,13 +1,13 @@
 # YouTube Livestream Browser
 
-A production-ready Next.js application that recreates a Twitch-style browsing experience for YouTube Live. Browse trending streams, launch a draggable multiview theatre with smart audio ducking, manage Supabase-backed layouts, and upgrade to Pro via Stripe.
+A production-ready Next.js application that recreates a Twitch-style browsing experience for YouTube Live. Browse trending streams, launch a draggable multiview theatre with smart audio ducking, manage Google-linked layouts, and upgrade to Pro via Stripe.
 
 ## Features
 
 - **Browse** live streams with filtering by category, language, and sort order using cached YouTube Data API v3 results.
 - **Watch** individual streams with rich metadata, related stream recommendations, and quick multiview entry points.
 - **Multiview theatre** for 2–6 streams with drag-resize layout, YouTube IFrame Player integration, and Web Audio-based volume ducking.
-- **Supabase-backed accounts** for saved layouts, followed channels, and alert configuration.
+- **Google OAuth accounts** for saved layouts, followed channels, and alert configuration.
 - **Stripe-powered billing** for monthly or yearly Pro subscriptions (with webhook-driven role updates).
 - **AdSense-compatible UI** that keeps banner placements outside of YouTube iframes.
 - **Dark, responsive UI** built with Tailwind CSS, reusable components, and accessibility-friendly controls.
@@ -18,7 +18,7 @@ A production-ready Next.js application that recreates a Twitch-style browsing ex
 - Tailwind CSS for styling
 - Custom layout manager inspired by react-grid-layout
 - YouTube Data API v3 + IFrame Player API
-- Supabase REST API for auth and persistence
+- Google OAuth 2.0 for authentication and lightweight mock persistence
 - Stripe Checkout for subscriptions
 - Node `crypto` for webhook verification
 
@@ -46,10 +46,9 @@ A production-ready Next.js application that recreates a Twitch-style browsing ex
 | --- | --- |
 | `YOUTUBE_API_KEY` | Server-side key for YouTube Data API v3. Leave blank to use local mocks. |
 | `USE_YOUTUBE_MOCKS` | Set to `true` to force mock livestream data for development. |
-| `SUPABASE_URL` | Supabase project URL. Optional when using mocks. |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key. Optional when using mocks. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key used for Stripe webhooks and layout persistence. Never expose to the client. |
-| `USE_SUPABASE_MOCKS` | Defaults to `true`. Set to `false` to require real Supabase credentials. |
+| `GOOGLE_CLIENT_ID` | OAuth client ID for Google/YouTube authentication. Required for real sign-in flows. |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret used during the code exchange. Required for real sign-in flows. |
+| `USE_AUTH_MOCKS` | Defaults to `true`. Set to `false` to require a valid Google session. |
 | `NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID` | Stripe price ID for the monthly Pro plan. |
 | `NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID` | Stripe price ID for the annual Pro plan. |
 | `STRIPE_SECRET_KEY` | Secret API key for creating Checkout sessions. |
@@ -58,11 +57,11 @@ A production-ready Next.js application that recreates a Twitch-style browsing ex
 
 See `.env.example` for a starter configuration.
 
-## Stripe & Supabase Integration
+## Stripe & Google Integration
 
 - Checkout sessions are created via `/api/stripe/session` and redirect users to Stripe-hosted payment flows.
-- Stripe webhooks (`/api/stripe/webhook`) validate signatures with `crypto` and update Supabase user roles.
-- Supabase persistence uses REST endpoints. In local development, mock data is returned when Supabase variables are missing.
+- Stripe webhooks (`/api/stripe/webhook`) validate signatures with `crypto` and update Google-linked user roles inside the in-memory store.
+- Persistence currently uses lightweight mocks keyed by Google user IDs. In production, replace the storage helpers with calls to your database of choice.
 
 ## Multiview Audio Manager
 
@@ -84,18 +83,18 @@ node --loader ts-node/esm --test src/tests/audioManager.test.ts
 
 ## Seed Data & Mocks
 
-Use the provided script to generate starter Supabase data:
+Use the provided script to generate starter mock data:
 
 ```bash
 node scripts/seed.mjs
 ```
 
-This creates `supabase-seed.json` with users, follows, layouts, and alerts mirroring the mock environment.
+This creates `auth-mock-seed.json` with users, follows, layouts, and alerts mirroring the mock environment.
 
 ## Data Deletion & Policies
 
 - The footer links to data deletion instructions and YouTube API Terms of Service.
-- Supabase mock endpoints only store minimal metadata locally. In production, implement a proper deletion handler that removes rows from `users`, `layouts`, `follows`, and `alerts`.
+- Mock endpoints only store minimal metadata locally. In production, implement a proper deletion handler that removes rows from your backing store.
 
 ## Project Structure
 

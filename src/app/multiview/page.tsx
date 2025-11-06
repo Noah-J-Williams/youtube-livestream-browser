@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { getCurrentUser, getLayouts } from "@/lib/supabase";
+import { getCurrentUser } from "@/lib/google-auth";
+import { getLayouts } from "@/lib/storage";
 import { getLiveStreams } from "@/lib/youtube";
 import { MultiviewClient } from "./shared";
 import type { LayoutItem } from "@/components/LayoutGrid";
@@ -20,7 +21,7 @@ export default async function MultiviewPage() {
       <section className="card space-y-3 p-6">
         <h1 className="text-2xl font-bold text-white">Multiview theatre</h1>
         <p className="text-sm text-slate-300">
-          Arrange up to {user?.role === "pro" ? "six" : "two"} live streams with smart audio ducking. Saved layouts are powered by Supabase.
+          Arrange up to {user?.role === "pro" ? "six" : "two"} live streams with smart audio ducking. Saved layouts are linked to your Google account.
         </p>
       </section>
       <Suspense fallback={<div className="card p-6 text-sm text-slate-300">Loading multiview experience…</div>}>

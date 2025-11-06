@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getAlerts, getCurrentUser, getFollows, getLayouts } from "@/lib/supabase";
+import { getCurrentUser } from "@/lib/google-auth";
+import { getAlerts, getFollows, getLayouts } from "@/lib/storage";
 import { getLiveStreams } from "@/lib/youtube";
 
 export const dynamic = "force-dynamic";
@@ -13,16 +14,16 @@ export default async function AccountPage() {
         <section className="card space-y-3 p-6">
           <h1 className="text-2xl font-bold text-white">Account</h1>
           <p className="text-sm text-slate-300">
-            Sign in with Supabase Auth to unlock saved multiview layouts, channel follows, and notification alerts.
+            Sign in with Google to unlock saved multiview layouts, channel follows, and notification alerts.
           </p>
           <p className="text-xs text-slate-500">
-            We use Supabase to securely store user profiles. Authenticate via magic link or OAuth providers configured in Supabase.
+            We request access to your YouTube account to personalise recommendations and sync preferences across devices.
           </p>
           <Link
-            href="/api/auth/signin"
+            href="/api/auth/google"
             className="inline-flex items-center justify-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-black"
           >
-            Sign in
+            Continue with Google
           </Link>
         </section>
         <GuestExplainer />
@@ -43,16 +44,24 @@ export default async function AccountPage() {
       <section className="card space-y-2 p-6">
         <h1 className="text-2xl font-bold text-white">Welcome back, {user.email}</h1>
         <p className="text-sm text-slate-300">Your current plan: <span className="text-emerald-300 uppercase">{user.role}</span></p>
-        <Link href="/pricing" className="text-sm text-emerald-300 hover:text-emerald-200">
-          Manage subscription
-        </Link>
+        <div className="flex items-center gap-3 text-sm text-slate-300">
+          <Link href="/pricing" className="text-emerald-300 hover:text-emerald-200">
+            Manage subscription
+          </Link>
+          <span aria-hidden="true" className="text-slate-600">
+            •
+          </span>
+          <Link href="/api/auth/signout" className="text-emerald-300 hover:text-emerald-200">
+            Sign out
+          </Link>
+        </div>
       </section>
 
       <section className="card space-y-4 p-6">
         <header>
           <h2 className="text-lg font-semibold text-white">Saved layouts</h2>
           <p className="text-xs text-slate-400">
-            Layouts persist between sessions thanks to Supabase. Edit them from the multiview page and they will sync automatically.
+            Layouts persist between sessions by linking your Google account. Edit them from the multiview page and they will sync automatically.
           </p>
         </header>
         {layouts.length === 0 ? (
@@ -85,7 +94,7 @@ export default async function AccountPage() {
         <header>
           <h2 className="text-lg font-semibold text-white">Followed channels</h2>
           <p className="text-xs text-slate-400">
-            Use follows to quickly surface creators on the browse page. We store channel IDs inside Supabase.
+            Use follows to quickly surface creators on the browse page. We store channel IDs alongside your Google profile.
           </p>
         </header>
         {follows.length === 0 ? (
@@ -136,7 +145,7 @@ function GuestExplainer() {
     <section className="card space-y-3 p-6 text-sm text-slate-300">
       <h2 className="text-lg font-semibold text-white">Why create an account?</h2>
       <ul className="list-disc space-y-2 pl-5">
-        <li>Sync multiview layouts across devices with Supabase.</li>
+        <li>Sync multiview layouts across devices with Google sign-in.</li>
         <li>Follow creators and receive alerts when they go live.</li>
         <li>Unlock 6-stream multiview, alert routing, and AdSense-free browsing with Pro.</li>
       </ul>

@@ -21,7 +21,7 @@ export const PLANS: Plan[] = [
     price: "$3.99",
     interval: "monthly",
     priceId: process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID ?? "price_monthly_placeholder",
-    features: ["Up to 6 streams", "AdSense-free experience", "Supabase layout syncing", "Alert automations"],
+    features: ["Up to 6 streams", "AdSense-free experience", "Google-linked layout syncing", "Alert automations"],
   },
   {
     name: "Pro Annual",

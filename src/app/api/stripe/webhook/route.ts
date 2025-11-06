@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { setUserRole } from "@/lib/supabase";
+import { setUserRole } from "@/lib/storage";
 
 type StripeEvent = {
   id: string;

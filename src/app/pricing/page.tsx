@@ -15,7 +15,7 @@ export default function PricingPage() {
         <h1 className="text-3xl font-bold text-white">Go Pro for the ultimate YouTube multiview</h1>
         <p className="mx-auto max-w-2xl text-sm text-slate-300">
           Keep watching two streams for free with AdSense support, or upgrade to Pro for six simultaneous players, audio focus
-          automation, alert routing, and layout syncing. Stripe powers secure payments and Supabase updates your account in real time.
+          automation, alert routing, and layout syncing. Stripe powers secure payments and Google OAuth updates your account in real time.
         </p>
       </section>
       <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -33,7 +33,7 @@ export default function PricingPage() {
             Never. We fully comply with YouTube and AdSense policies. Pro removes only the surrounding banner placements.
           </FaqItem>
           <FaqItem question="What about data privacy?">
-            User data lives in Supabase. You can export or delete your information at any time via the data deletion portal.
+            User data lives in our Google-linked datastore. You can export or delete your information at any time via the data deletion portal.
           </FaqItem>
         </div>
       </section>
