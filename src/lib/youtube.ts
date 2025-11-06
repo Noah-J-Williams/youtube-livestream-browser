@@ -57,14 +57,25 @@ export async function getLiveStreams(rawParams: SearchParams): Promise<YouTubeSe
 
   const cached = cache.get(key);
   if (cached && cached.expiresAt > now) {
+    console.log("[YouTube] Returning cached live streams", {
+      key,
+      fetchedAt: cached.data.fetchedAt,
+      streamCount: cached.data.streams.length,
+    });
     return cached.data;
   }
 
+  console.log("[YouTube] Fetching live streams from source", { params, key });
   const result: YouTubeSearchResult = {
     fetchedAt: new Date().toISOString(),
     streams: await fetchStreamsFromSource(params),
   };
 
+  console.log("[YouTube] Live streams fetched", {
+    fetchedAt: result.fetchedAt,
+    streamCount: result.streams.length,
+    streamIds: result.streams.map((stream) => stream.id),
+  });
   cache.set(key, { data: result, expiresAt: now + CACHE_TTL_MS });
   return result;
 }
@@ -88,6 +99,10 @@ export async function getStreamById(id: string): Promise<YouTubeLiveStream | nul
 async function fetchStreamsFromSource(params: z.output<typeof searchParamsSchema>): Promise<YouTubeLiveStream[]> {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey || process.env.USE_YOUTUBE_MOCKS === "true") {
+    console.log("[YouTube] Using mock streams", {
+      reason: !apiKey ? "missing_api_key" : "USE_YOUTUBE_MOCKS flag set",
+      requestedCount: params.maxResults,
+    });
     return generateMockStreams(params.maxResults);
   }
 
@@ -101,13 +116,25 @@ async function fetchStreamsFromSource(params: z.output<typeof searchParamsSchema
   url.searchParams.set("regionCode", params.regionCode);
   url.searchParams.set("key", apiKey);
 
+  console.log("[YouTube] Requesting live streams from YouTube API", {
+    endpoint: url.origin + url.pathname,
+    query: Object.fromEntries(url.searchParams.entries()),
+  });
   const response = await fetch(url.toString(), { next: { revalidate: CACHE_TTL_MS / 1000 } });
+  console.log("[YouTube] YouTube API response received", {
+    status: response.status,
+    statusText: response.statusText,
+  });
   if (!response.ok) {
     console.error("YouTube API error", await response.text());
     return generateMockStreams(params.maxResults);
   }
 
   const json = (await response.json()) as YouTubeSearchApiResponse;
+  console.log("[YouTube] YouTube API returned items", {
+    itemCount: json.items.length,
+    videoIds: json.items.map((item) => item.id.videoId),
+  });
   return json.items.map((item) =>
     youTubeStreamSchema.parse({
       id: item.id.videoId,
