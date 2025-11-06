@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     template: "%s | YouTube Livestream Browser",
   },
   description:
-    "Discover and watch live YouTube streams with a Twitch-style multiview, smart audio controls, and Supabase-powered accounts.",
+    "Discover and watch live YouTube streams with a Twitch-style multiview, smart audio controls, and Google-powered accounts.",
   metadataBase: new URL("https://youtube-livestream-browser.example.com"),
   openGraph: {
     title: "YouTube Livestream Browser",

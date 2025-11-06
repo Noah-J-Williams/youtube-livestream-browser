@@ -4,14 +4,14 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation";
 import { AudioManagerProvider, useAudioManager } from "@/components/AudioManager";
 import { LayoutGrid, type LayoutItem } from "@/components/LayoutGrid";
-import type { SupabaseUser } from "@/lib/supabase";
-import { saveLayout } from "@/lib/supabase";
+import type { AppUser } from "@/lib/user";
+import { saveLayout } from "@/lib/storage";
 import type { YouTubeLiveStream } from "@/lib/youtube";
 
 export type MultiviewClientProps = {
   streams: YouTubeLiveStream[];
   initialLayout: LayoutItem[];
-  user: SupabaseUser | null;
+  user: AppUser | null;
   maxTiles: number;
 };
 
@@ -105,7 +105,7 @@ function MultiviewExperience({ streams, initialLayout, user, maxTiles }: Multivi
         .catch((err) => {
           console.error(err);
           setStatus("error");
-          setError("Failed to save layout to Supabase.");
+          setError("Failed to save layout to Google-linked storage.");
         });
     }, 600);
     return () => clearTimeout(timer);
@@ -145,11 +145,11 @@ function MultiviewExperience({ streams, initialLayout, user, maxTiles }: Multivi
                 ? status === "saving"
                   ? "Saving layout…"
                   : status === "saved"
-                    ? "Layout saved to Supabase."
+                    ? "Layout saved to your Google profile."
                     : status === "error"
                       ? error
                       : "Layout synced."
-                : "Sign in with Supabase auth to save layouts and alerts."}
+                : "Sign in with Google to save layouts and alerts."}
             </div>
           </div>
           {error && (
@@ -160,7 +160,7 @@ function MultiviewExperience({ streams, initialLayout, user, maxTiles }: Multivi
           <section className="card space-y-3 p-4">
             <h2 className="text-lg font-semibold text-white">Add another stream</h2>
             <p className="text-xs text-slate-400">
-              Select up to {maxTiles} streams. Pro subscribers can enable alerts and store multiple layouts in Supabase.
+              Select up to {maxTiles} streams. Pro subscribers can enable alerts and store multiple layouts with Google sync.
             </p>
             <div className="flex max-h-72 flex-col gap-2 overflow-y-auto">
               {availableStreams.map((stream) => (
