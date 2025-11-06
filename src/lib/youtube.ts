@@ -18,13 +18,38 @@ const CATEGORY_NAMES: Record<string, string> = {
   "29": "Nonprofits & Activism",
 };
 
-const DEFAULT_SEARCH_QUERIES = [
-  "live stream",
-  "gaming live",
-  "music live",
-  "news live",
-  "sports live",
+const DEFAULT_SEARCH_CATEGORIES = [
+  "gaming",
+  "music",
+  "news",
+  "sports",
+  "entertainment",
+  "technology",
+  "education",
 ];
+
+const DEFAULT_SEARCH_LANGUAGES = [
+  "english",
+  "spanish",
+  "portuguese",
+  "japanese",
+  "korean",
+  "french",
+  "german",
+];
+
+const DEFAULT_SEARCH_QUERIES = Array.from(
+  new Set(
+    [
+      "live stream",
+      ...DEFAULT_SEARCH_CATEGORIES.map((category) => `${category} live stream`),
+      ...DEFAULT_SEARCH_LANGUAGES.map((language) => `${language} live stream`),
+      ...DEFAULT_SEARCH_CATEGORIES.flatMap((category) =>
+        DEFAULT_SEARCH_LANGUAGES.map((language) => `${language} ${category} live`)
+      ),
+    ].map((entry) => entry.trim())
+  )
+);
 
 type CacheEntry<T> = {
   data: T;
