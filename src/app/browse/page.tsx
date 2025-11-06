@@ -9,7 +9,7 @@ export default async function BrowsePage() {
     query: "",
     eventType: "live",
     regionCode: "US",
-    maxResults: 24,
+    maxResults: 72,
     order: "viewCount",
   });
 

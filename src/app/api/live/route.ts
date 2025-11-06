@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     query: params.query ?? "",
     eventType: "live",
     regionCode: params.regionCode ?? "US",
-    maxResults: params.maxResults ? Number(params.maxResults) : 24,
+    maxResults: params.maxResults ? Number(params.maxResults) : 72,
     order: params.order === "date" ? "date" : params.order === "relevance" ? "relevance" : "viewCount",
     language: params.language,
     category: params.category,
