@@ -6,8 +6,9 @@ import type { AppUser } from "./user";
 const GOOGLE_TOKEN_INFO_ENDPOINT = "https://oauth2.googleapis.com/tokeninfo";
 
 export async function getCurrentUser(): Promise<AppUser | null> {
+  const cookieStore = await cookies();
   const idToken =
-    cookies().get("google-id-token")?.value ?? headers().get("authorization")?.replace("Bearer ", "") ?? undefined;
+    cookieStore.get("google-id-token")?.value ?? headers().get("authorization")?.replace("Bearer ", "") ?? undefined;
 
   if (!idToken) {
     return process.env.USE_AUTH_MOCKS !== "false" ? defaultMockData.user : null;
