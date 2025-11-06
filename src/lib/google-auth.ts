@@ -30,7 +30,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
       email: profile.email,
       name: profile.name ?? null,
       image: profile.picture ?? null,
-      role: getUserRole(profile.sub),
+      role: await getUserRole(profile.sub),
     };
   } catch (error) {
     console.error("Error fetching Google token info", error);

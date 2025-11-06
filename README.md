@@ -49,19 +49,22 @@ A production-ready Next.js application that recreates a Twitch-style browsing ex
 | `GOOGLE_CLIENT_ID` | OAuth client ID for Google/YouTube authentication. Required for real sign-in flows. |
 | `GOOGLE_CLIENT_SECRET` | OAuth client secret used during the code exchange. Required for real sign-in flows. |
 | `USE_AUTH_MOCKS` | Defaults to `true`. Set to `false` to require a valid Google session. |
+| `DATABASE_URL` | Postgres connection string for Prisma (use the Supabase-provided URL). |
 | `NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID` | Stripe price ID for the monthly Pro plan. |
 | `NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID` | Stripe price ID for the annual Pro plan. |
 | `STRIPE_SECRET_KEY` | Secret API key for creating Checkout sessions. |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret for webhook verification. |
 | `NEXT_PUBLIC_APP_URL` | (Optional) Absolute app URL used in Stripe redirect links. |
 
-See `.env.example` for a starter configuration.
+See `.env.example` for a starter configuration. Once the database connection string is configured, run `npx prisma db push` to
+provision the required tables in Supabase and generate the Prisma client.
 
 ## Stripe & Google Integration
 
 - Checkout sessions are created via `/api/stripe/session` and redirect users to Stripe-hosted payment flows.
 - Stripe webhooks (`/api/stripe/webhook`) validate signatures with `crypto` and update Google-linked user roles inside the in-memory store.
-- Persistence currently uses lightweight mocks keyed by Google user IDs. In production, replace the storage helpers with calls to your database of choice.
+- Persistence uses Prisma to persist Google-linked data to Supabase when `USE_AUTH_MOCKS=false`, and falls back to lightweight
+  mocks for local development.
 
 ## Multiview Audio Manager
 

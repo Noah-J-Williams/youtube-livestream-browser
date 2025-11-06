@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     if (profileResponse.ok) {
       const profile = (await profileResponse.json()) as { sub?: string };
       if (profile.sub) {
-        getUserRole(profile.sub);
+        await getUserRole(profile.sub);
       }
     }
   } catch (error) {
