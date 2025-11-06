@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Layout {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  layoutJson Json     @map("layout_json")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId])
+  @@map("layouts")
+}
+
+model Follow {
+  id        Int    @id @default(autoincrement())
+  userId    String @map("user_id")
+  channelId String @map("channel_id")
+
+  @@unique([userId, channelId])
+  @@map("follows")
+}
+
+model Alert {
+  id         Int    @id @default(autoincrement())
+  userId     String @map("user_id")
+  configJson Json   @map("config_json")
+
+  @@unique([userId])
+  @@map("alerts")
+}
+
+model UserRole {
+  userId String  @id @map("user_id")
+  role   String
+
+  @@map("user_roles")
+}
