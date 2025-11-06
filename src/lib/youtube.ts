@@ -92,9 +92,10 @@ export async function getLiveStreams(rawParams: SearchParams): Promise<YouTubeSe
   }
 
   console.log("[YouTube] Fetching live streams from source", { params, key });
+  const streams = await fetchStreamsFromSource(params);
   const result: YouTubeSearchResult = {
     fetchedAt: new Date().toISOString(),
-    streams: await fetchStreamsFromSource(params),
+    streams,
   };
 
   console.log("[YouTube] Live streams fetched", {
@@ -132,19 +133,16 @@ export async function getStreamById(id: string): Promise<YouTubeLiveStream | nul
 
 async function fetchStreamsFromSource(params: z.output<typeof searchParamsSchema>): Promise<YouTubeLiveStream[]> {
   const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey || process.env.USE_YOUTUBE_MOCKS === "true") {
-    console.log("[YouTube] Using mock streams", {
-      reason: !apiKey ? "missing_api_key" : "USE_YOUTUBE_MOCKS flag set",
-      requestedCount: params.maxResults,
-    });
-    return generateMockStreams(params.maxResults);
+  if (!apiKey) {
+    console.error("[YouTube] Missing YOUTUBE_API_KEY environment variable");
+    return [];
   }
 
   const searchResults = await collectSearchResults(apiKey, params);
 
   if (searchResults.length === 0) {
-    console.warn("[YouTube] No live streams returned from search, falling back to mocks");
-    return generateMockStreams(params.maxResults);
+    console.warn("[YouTube] No live streams returned from search");
+    return [];
   }
 
   const videoIds = searchResults.map((item) => item.id.videoId);
@@ -333,11 +331,11 @@ async function fetchVideoDetails(
 }
 
 async function fetchStreamByIdFromSource(id: string): Promise<YouTubeLiveStream | null> {
-  if (process.env.USE_YOUTUBE_MOCKS === "true" || !process.env.YOUTUBE_API_KEY) {
-    return generateMockStreams(100).find((stream) => stream.id === id) ?? null;
-  }
-
   const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    console.error("[YouTube] Missing YOUTUBE_API_KEY environment variable while fetching stream", { id });
+    return null;
+  }
   const url = new URL("https://www.googleapis.com/youtube/v3/videos");
   url.searchParams.set("part", "snippet,liveStreamingDetails");
   url.searchParams.set("id", id);
@@ -433,31 +431,3 @@ type YouTubeVideoApiResponse = {
     };
   }>;
 };
-
-export function generateMockStreams(count = 12): YouTubeLiveStream[] {
-  return Array.from({ length: count }).map((_, index) => {
-    const id = `mock-stream-${index + 1}`;
-    const categories = [
-      "Gaming",
-      "Music",
-      "News & Politics",
-      "Sports",
-      "Science & Technology",
-      "Entertainment",
-    ];
-    const languages = ["en", "es", "ja", "ko", "fr", "pt", "de"];
-    const tags = ["chill", "competitive", "analysis", "live", "vibes"];
-    return youTubeStreamSchema.parse({
-      id,
-      title: `Mock Stream ${index + 1}`,
-      channelTitle: `Creator ${index + 1}`,
-      thumbnail: `https://i.ytimg.com/vi/5qap5aO4i9A/hqdefault.jpg`,
-      liveViewers: Math.floor(Math.random() * 10000) + 10,
-      language: languages[index % languages.length],
-      category: categories[index % categories.length],
-      startedAt: new Date(Date.now() - index * 10 * 60 * 1000).toISOString(),
-      description: "This is mocked livestream data for local development.",
-      tags: tags.slice(0, 2 + (index % 3)),
-    });
-  });
-}

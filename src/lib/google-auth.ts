@@ -1,5 +1,4 @@
 import { cookies, headers } from "next/headers";
-import { defaultMockData } from "./mock-data";
 import { getUserRole } from "./storage";
 import type { AppUser } from "./user";
 
@@ -12,14 +11,14 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     cookieStore.get("google-id-token")?.value ?? headerList.get("authorization")?.replace("Bearer ", "") ?? undefined;
 
   if (!idToken) {
-    return process.env.USE_AUTH_MOCKS !== "false" ? defaultMockData.user : null;
+    return null;
   }
 
   try {
     const profileResponse = await fetch(`${GOOGLE_TOKEN_INFO_ENDPOINT}?id_token=${idToken}`, { cache: "no-store" });
     if (!profileResponse.ok) {
       console.error("Failed to verify Google ID token", profileResponse.statusText);
-      return process.env.USE_AUTH_MOCKS !== "false" ? defaultMockData.user : null;
+      return null;
     }
 
     const profile = (await profileResponse.json()) as GoogleTokenInfoResponse;
@@ -36,7 +35,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     };
   } catch (error) {
     console.error("Error fetching Google token info", error);
-    return process.env.USE_AUTH_MOCKS !== "false" ? defaultMockData.user : null;
+    return null;
   }
 }
 
