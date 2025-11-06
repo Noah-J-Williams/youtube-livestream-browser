@@ -18,7 +18,7 @@ A production-ready Next.js application that recreates a Twitch-style browsing ex
 - Tailwind CSS for styling
 - Custom layout manager inspired by react-grid-layout
 - YouTube Data API v3 + IFrame Player API
-- Google OAuth 2.0 for authentication and lightweight mock persistence
+- Google OAuth 2.0 for authentication and Prisma-backed persistence
 - Stripe Checkout for subscriptions
 - Node `crypto` for webhook verification
 
@@ -44,11 +44,9 @@ A production-ready Next.js application that recreates a Twitch-style browsing ex
 
 | Variable | Description |
 | --- | --- |
-| `YOUTUBE_API_KEY` | Server-side key for YouTube Data API v3. Leave blank to use local mocks. |
-| `USE_YOUTUBE_MOCKS` | Set to `true` to force mock livestream data for development. |
+| `YOUTUBE_API_KEY` | Server-side key for YouTube Data API v3. Required for fetching livestream data. |
 | `GOOGLE_CLIENT_ID` | OAuth client ID for Google/YouTube authentication. Required for real sign-in flows. |
 | `GOOGLE_CLIENT_SECRET` | OAuth client secret used during the code exchange. Required for real sign-in flows. |
-| `USE_AUTH_MOCKS` | Defaults to `true`. Set to `false` to require a valid Google session. |
 | `DATABASE_URL` | Postgres connection string for Prisma (use the Supabase-provided URL). |
 | `NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID` | Stripe price ID for the monthly Pro plan. |
 | `NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID` | Stripe price ID for the annual Pro plan. |
@@ -62,9 +60,8 @@ provision the required tables in Supabase and generate the Prisma client.
 ## Stripe & Google Integration
 
 - Checkout sessions are created via `/api/stripe/session` and redirect users to Stripe-hosted payment flows.
-- Stripe webhooks (`/api/stripe/webhook`) validate signatures with `crypto` and update Google-linked user roles inside the in-memory store.
-- Persistence uses Prisma to persist Google-linked data to Supabase when `USE_AUTH_MOCKS=false`, and falls back to lightweight
-  mocks for local development.
+- Stripe webhooks (`/api/stripe/webhook`) validate signatures with `crypto` and update Google-linked user roles in the database.
+- Persistence uses Prisma to persist Google-linked data to Supabase.
 
 ## Multiview Audio Manager
 
@@ -84,20 +81,10 @@ node --loader ts-node/esm --test src/tests/audioManager.test.ts
 
 (Install `ts-node` locally if it is not already available.)
 
-## Seed Data & Mocks
-
-Use the provided script to generate starter mock data:
-
-```bash
-node scripts/seed.mjs
-```
-
-This creates `auth-mock-seed.json` with users, follows, layouts, and alerts mirroring the mock environment.
-
 ## Data Deletion & Policies
 
 - The footer links to data deletion instructions and YouTube API Terms of Service.
-- Mock endpoints only store minimal metadata locally. In production, implement a proper deletion handler that removes rows from your backing store.
+- Implement a proper deletion handler that removes rows from your backing store.
 
 ## Project Structure
 
