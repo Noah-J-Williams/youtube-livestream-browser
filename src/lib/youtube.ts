@@ -114,9 +114,17 @@ export async function getStreamById(id: string): Promise<YouTubeLiveStream | nul
     }
   }
 
-  const mockMatch = generateMockStreams(25).find((stream) => stream.id === id);
-  if (mockMatch) {
-    return mockMatch;
+  const fetched = await fetchStreamByIdFromSource(id);
+  if (fetched) {
+    const now = Date.now();
+    cache.set(
+      JSON.stringify({ type: "single", id }),
+      {
+        data: { fetchedAt: new Date(now).toISOString(), streams: [fetched] },
+        expiresAt: now + CACHE_TTL_MS,
+      }
+    );
+    return fetched;
   }
 
   return null;
@@ -322,6 +330,59 @@ async function fetchVideoDetails(
   }
 
   return details;
+}
+
+async function fetchStreamByIdFromSource(id: string): Promise<YouTubeLiveStream | null> {
+  if (process.env.USE_YOUTUBE_MOCKS === "true" || !process.env.YOUTUBE_API_KEY) {
+    return generateMockStreams(100).find((stream) => stream.id === id) ?? null;
+  }
+
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  const url = new URL("https://www.googleapis.com/youtube/v3/videos");
+  url.searchParams.set("part", "snippet,liveStreamingDetails");
+  url.searchParams.set("id", id);
+  url.searchParams.set("key", apiKey!);
+
+  console.log("[YouTube] Fetching single stream by id", { id });
+  const response = await fetch(url.toString(), { next: { revalidate: CACHE_TTL_MS / 1000 } });
+  if (!response.ok) {
+    console.error("[YouTube] Failed to load stream by id", { status: response.status, statusText: response.statusText });
+    return null;
+  }
+
+  const json = (await response.json()) as YouTubeVideoApiResponse;
+  const item = json.items.find((entry) => entry.liveStreamingDetails?.actualStartTime || entry.liveStreamingDetails?.concurrentViewers);
+
+  if (!item || !item.liveStreamingDetails) {
+    return null;
+  }
+
+  const snippet = item.snippet;
+  const liveDetails = item.liveStreamingDetails;
+  const thumbnail = snippet.thumbnails.high?.url ?? snippet.thumbnails.medium?.url ?? snippet.thumbnails.default.url;
+  const language = snippet.defaultAudioLanguage ?? snippet.defaultLanguage ?? "en";
+  const categoryId = snippet.categoryId;
+  const category = categoryId ? CATEGORY_NAMES[categoryId] ?? `Category ${categoryId}` : "General";
+  const startedAt = liveDetails.actualStartTime ?? liveDetails.scheduledStartTime ?? snippet.publishedAt;
+  const liveViewers = liveDetails.concurrentViewers ? Number(liveDetails.concurrentViewers) : 0;
+
+  try {
+    return youTubeStreamSchema.parse({
+      id,
+      title: snippet.title,
+      channelTitle: snippet.channelTitle,
+      thumbnail,
+      liveViewers,
+      language,
+      category,
+      startedAt,
+      description: snippet.description,
+      tags: snippet.tags,
+    });
+  } catch (error) {
+    console.error("[YouTube] Failed to parse stream fetched by id", { id, error });
+    return null;
+  }
 }
 
 type YouTubeSearchApiResponse = {
