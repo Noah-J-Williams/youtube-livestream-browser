@@ -11,7 +11,7 @@ type ClientLogProps = {
 };
 
 export function ClientLog({ label, data, level = "log" }: ClientLogProps) {
-  const lastSnapshot = useRef<string | undefined>();
+  const lastSnapshot = useRef<string | undefined>(undefined);
 
   const snapshot = useMemo(() => {
     try {
