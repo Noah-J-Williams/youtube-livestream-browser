@@ -61,7 +61,7 @@ const searchParamsSchema = z.object({
   query: z.string().default(""),
   eventType: z.literal("live").default("live"),
   regionCode: z.string().default("US"),
-  maxResults: z.number().int().min(1).max(50).default(25),
+  maxResults: z.number().int().min(1).max(150).default(25),
   language: z.string().optional(),
   category: z.string().optional(),
   order: z.enum(["relevance", "date", "viewCount"]).default("viewCount"),
@@ -186,12 +186,19 @@ async function collectSearchResults(
   const isCustomQuery = trimmedQuery.length > 0;
   const queries = isCustomQuery ? [trimmedQuery] : DEFAULT_SEARCH_QUERIES;
 
-  const maxPerQuery = isCustomQuery
-    ? params.maxResults
-    : Math.min(12, Math.max(5, Math.ceil(params.maxResults / Math.max(queries.length, 1)) + 2));
+  for (const [queryIndex, query] of queries.entries()) {
+    const remainingSlots = params.maxResults - items.size;
+    if (remainingSlots <= 0) {
+      break;
+    }
 
-  for (const query of queries) {
-    const results = await searchYouTube(apiKey, params, query, maxPerQuery);
+    const remainingQueries = Math.max(1, queries.length - queryIndex);
+    const desiredPerQuery = isCustomQuery
+      ? remainingSlots
+      : Math.ceil(remainingSlots / remainingQueries) + 6;
+    const maxResultsForQuery = Math.min(100, Math.max(10, desiredPerQuery));
+
+    const results = await searchYouTube(apiKey, params, query, maxResultsForQuery);
     for (const result of results) {
       if (!result.id?.videoId) continue;
       if (!items.has(result.id.videoId)) {
@@ -215,6 +222,33 @@ async function searchYouTube(
   query: string,
   maxResults: number
 ): Promise<YouTubeSearchApiResponse["items"]> {
+  const collected: YouTubeSearchApiResponse["items"] = [];
+  let nextPageToken: string | undefined = undefined;
+
+  while (collected.length < maxResults) {
+    const itemsNeeded = maxResults - collected.length;
+    const pageLimit = Math.min(50, Math.max(1, itemsNeeded));
+    const page = await fetchSearchPage(apiKey, params, query, pageLimit, nextPageToken);
+
+    collected.push(...page.items);
+
+    if (!page.nextPageToken || page.items.length === 0) {
+      break;
+    }
+
+    nextPageToken = page.nextPageToken;
+  }
+
+  return collected.slice(0, maxResults);
+}
+
+async function fetchSearchPage(
+  apiKey: string,
+  params: z.output<typeof searchParamsSchema>,
+  query: string,
+  maxResults: number,
+  pageToken?: string
+): Promise<Pick<YouTubeSearchApiResponse, "items" | "nextPageToken">> {
   const url = new URL("https://www.googleapis.com/youtube/v3/search");
   url.searchParams.set("part", "snippet");
   url.searchParams.set("eventType", params.eventType);
@@ -224,6 +258,9 @@ async function searchYouTube(
   url.searchParams.set("q", query);
   url.searchParams.set("regionCode", params.regionCode);
   url.searchParams.set("key", apiKey);
+  if (pageToken) {
+    url.searchParams.set("pageToken", pageToken);
+  }
 
   console.log("[YouTube] Requesting live streams from YouTube API", {
     endpoint: url.origin + url.pathname,
@@ -236,7 +273,7 @@ async function searchYouTube(
   });
   if (!response.ok) {
     console.error("YouTube API error", await response.text());
-    return [];
+    return { items: [], nextPageToken: undefined };
   }
 
   const json = (await response.json()) as YouTubeSearchApiResponse;
@@ -244,9 +281,10 @@ async function searchYouTube(
     query,
     itemCount: json.items.length,
     videoIds: json.items.map((item) => item.id.videoId),
+    nextPageToken: json.nextPageToken,
   });
 
-  return json.items;
+  return { items: json.items, nextPageToken: json.nextPageToken };
 }
 
 async function fetchVideoDetails(
@@ -287,6 +325,7 @@ async function fetchVideoDetails(
 }
 
 type YouTubeSearchApiResponse = {
+  nextPageToken?: string;
   items: Array<{
     id: { videoId: string };
     snippet: {
