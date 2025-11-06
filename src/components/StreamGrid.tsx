@@ -9,7 +9,7 @@ const DEFAULT_FILTERS: FilterState = {
   query: "",
   category: "",
   language: "",
-  sort: "viewers",
+  sort: "viewersDesc",
 };
 
 type StreamGridProps = {
@@ -58,10 +58,16 @@ export function StreamGrid({ streams, onAddToMultiview, featuredStreamId }: Stre
       return true;
     });
 
-    if (filters.sort === "viewers") {
-      filtered.sort((a, b) => b.liveViewers - a.liveViewers);
-    } else {
-      filtered.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+    switch (filters.sort) {
+      case "viewersAsc":
+        filtered.sort((a, b) => a.liveViewers - b.liveViewers);
+        break;
+      case "recent":
+        filtered.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+        break;
+      default:
+        filtered.sort((a, b) => b.liveViewers - a.liveViewers);
+        break;
     }
 
     return filtered;

@@ -6,7 +6,7 @@ export type FilterState = {
   query: string;
   category: string;
   language: string;
-  sort: "viewers" | "recent";
+  sort: "viewersDesc" | "viewersAsc" | "recent";
 };
 
 type ToolbarProps = {
@@ -48,11 +48,21 @@ export function Toolbar({ filters, categories, languages, onChange }: ToolbarPro
           type="button"
           className={cn(
             "rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-emerald-400 hover:text-white",
-            filters.sort === "viewers" && "border-emerald-400 text-white"
+            filters.sort === "viewersDesc" && "border-emerald-400 text-white"
           )}
-          onClick={() => onChange({ ...filters, sort: "viewers" })}
+          onClick={() => onChange({ ...filters, sort: "viewersDesc" })}
         >
-          Sort by viewers
+          Viewers (high → low)
+        </button>
+        <button
+          type="button"
+          className={cn(
+            "rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-emerald-400 hover:text-white",
+            filters.sort === "viewersAsc" && "border-emerald-400 text-white"
+          )}
+          onClick={() => onChange({ ...filters, sort: "viewersAsc" })}
+        >
+          Viewers (low → high)
         </button>
         <button
           type="button"
