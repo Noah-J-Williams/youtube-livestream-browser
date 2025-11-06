@@ -1,4 +1,5 @@
 import { StreamGrid } from "@/components/StreamGrid";
+import { ClientLog } from "@/components/ClientLog";
 import { getLiveStreams } from "@/lib/youtube";
 
 export const revalidate = 90;
@@ -14,6 +15,14 @@ export default async function BrowsePage() {
 
   return (
     <div className="space-y-8">
+      <ClientLog
+        label="[YouTube] Browse page live streams"
+        data={{
+          fetchedAt,
+          streamCount: streams.length,
+          streamIds: streams.map((stream) => stream.id),
+        }}
+      />
       <section className="card overflow-hidden">
         <div className="flex flex-col gap-3 bg-gradient-to-r from-emerald-500/10 to-emerald-400/10 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>

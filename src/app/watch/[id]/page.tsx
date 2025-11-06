@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { StreamCard } from "@/components/StreamCard";
+import { ClientLog } from "@/components/ClientLog";
 import { getLiveStreams, getStreamById } from "@/lib/youtube";
 
 export const revalidate = 60;
@@ -28,6 +29,20 @@ export default async function WatchPage({ params }: WatchPageProps) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <ClientLog
+        label="[YouTube] Watch page stream"
+        data={{
+          streamId: stream.id,
+          relatedStreamCount: relatedStreams.length,
+        }}
+      />
+      <ClientLog
+        label="[YouTube] Watch page related streams"
+        data={{
+          streamIds: filteredRelated.map((item) => item.id),
+          totalAvailable: relatedStreams.length,
+        }}
+      />
       <section className="space-y-6">
         <div className="relative aspect-video overflow-hidden rounded-xl border border-slate-800 bg-black">
           <iframe

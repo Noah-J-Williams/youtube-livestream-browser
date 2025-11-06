@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/google-auth";
 import { getLayouts } from "@/lib/storage";
 import { getLiveStreams } from "@/lib/youtube";
+import { ClientLog } from "@/components/ClientLog";
 import { MultiviewClient } from "./shared";
 import type { LayoutItem } from "@/components/LayoutGrid";
 
@@ -18,6 +19,14 @@ export default async function MultiviewPage() {
 
   return (
     <div className="space-y-6">
+      <ClientLog
+        label="[YouTube] Multiview page streams"
+        data={{
+          streamCount: streams.length,
+          defaultLayoutTileIds: defaultLayout.map((tile) => tile.id),
+          savedLayoutsCount: savedLayouts.length,
+        }}
+      />
       <section className="card space-y-3 p-6">
         <h1 className="text-2xl font-bold text-white">Multiview theatre</h1>
         <p className="text-sm text-slate-300">
