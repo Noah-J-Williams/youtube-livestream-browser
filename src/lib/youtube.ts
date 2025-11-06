@@ -1,5 +1,31 @@
 import { z } from "zod";
 
+const CATEGORY_NAMES: Record<string, string> = {
+  "1": "Film & Animation",
+  "2": "Autos & Vehicles",
+  "10": "Music",
+  "15": "Pets & Animals",
+  "17": "Sports",
+  "19": "Travel & Events",
+  "20": "Gaming",
+  "22": "People & Blogs",
+  "23": "Comedy",
+  "24": "Entertainment",
+  "25": "News & Politics",
+  "26": "Howto & Style",
+  "27": "Education",
+  "28": "Science & Technology",
+  "29": "Nonprofits & Activism",
+};
+
+const DEFAULT_SEARCH_QUERIES = [
+  "live stream",
+  "gaming live",
+  "music live",
+  "news live",
+  "sports live",
+];
+
 type CacheEntry<T> = {
   data: T;
   expiresAt: number;
@@ -106,13 +132,96 @@ async function fetchStreamsFromSource(params: z.output<typeof searchParamsSchema
     return generateMockStreams(params.maxResults);
   }
 
+  const searchResults = await collectSearchResults(apiKey, params);
+
+  if (searchResults.length === 0) {
+    console.warn("[YouTube] No live streams returned from search, falling back to mocks");
+    return generateMockStreams(params.maxResults);
+  }
+
+  const videoIds = searchResults.map((item) => item.id.videoId);
+  const videoDetails = await fetchVideoDetails(videoIds, apiKey);
+
+  return searchResults.map((item) => {
+    const details = videoDetails.get(item.id.videoId);
+    const snippet = details?.snippet ?? item.snippet;
+    const liveDetails = details?.liveStreamingDetails;
+    const thumbnail =
+      snippet.thumbnails.high?.url ?? snippet.thumbnails.medium?.url ?? snippet.thumbnails.default.url;
+
+    const language =
+      snippet.defaultAudioLanguage ?? snippet.defaultLanguage ?? params.language ?? "en";
+    const categoryId = snippet.categoryId ?? details?.snippet?.categoryId;
+    const category = categoryId
+      ? CATEGORY_NAMES[categoryId] ?? `Category ${categoryId}`
+      : params.category ?? "General";
+    const startedAt = liveDetails?.actualStartTime ?? snippet.publishedAt;
+    const liveViewers = liveDetails?.concurrentViewers
+      ? Number(liveDetails.concurrentViewers)
+      : item.snippet.liveBroadcastContent === "live"
+        ? Math.floor(Math.random() * 5000) + 50
+        : 0;
+
+    return youTubeStreamSchema.parse({
+      id: item.id.videoId,
+      title: snippet.title,
+      channelTitle: snippet.channelTitle,
+      thumbnail,
+      liveViewers,
+      language,
+      category,
+      startedAt,
+      description: snippet.description,
+      tags: snippet.tags,
+    });
+  });
+}
+
+async function collectSearchResults(
+  apiKey: string,
+  params: z.output<typeof searchParamsSchema>
+): Promise<YouTubeSearchApiResponse["items"]> {
+  const items = new Map<string, YouTubeSearchApiResponse["items"][number]>();
+  const trimmedQuery = params.query.trim();
+  const isCustomQuery = trimmedQuery.length > 0;
+  const queries = isCustomQuery ? [trimmedQuery] : DEFAULT_SEARCH_QUERIES;
+
+  const maxPerQuery = isCustomQuery
+    ? params.maxResults
+    : Math.min(12, Math.max(5, Math.ceil(params.maxResults / Math.max(queries.length, 1)) + 2));
+
+  for (const query of queries) {
+    const results = await searchYouTube(apiKey, params, query, maxPerQuery);
+    for (const result of results) {
+      if (!result.id?.videoId) continue;
+      if (!items.has(result.id.videoId)) {
+        items.set(result.id.videoId, result);
+      }
+      if (items.size >= params.maxResults) {
+        break;
+      }
+    }
+    if (items.size >= params.maxResults) {
+      break;
+    }
+  }
+
+  return Array.from(items.values()).slice(0, params.maxResults);
+}
+
+async function searchYouTube(
+  apiKey: string,
+  params: z.output<typeof searchParamsSchema>,
+  query: string,
+  maxResults: number
+): Promise<YouTubeSearchApiResponse["items"]> {
   const url = new URL("https://www.googleapis.com/youtube/v3/search");
   url.searchParams.set("part", "snippet");
   url.searchParams.set("eventType", params.eventType);
   url.searchParams.set("type", "video");
-  url.searchParams.set("maxResults", params.maxResults.toString());
+  url.searchParams.set("maxResults", Math.min(50, Math.max(1, maxResults)).toString());
   url.searchParams.set("order", params.order);
-  url.searchParams.set("q", params.query);
+  url.searchParams.set("q", query);
   url.searchParams.set("regionCode", params.regionCode);
   url.searchParams.set("key", apiKey);
 
@@ -127,28 +236,54 @@ async function fetchStreamsFromSource(params: z.output<typeof searchParamsSchema
   });
   if (!response.ok) {
     console.error("YouTube API error", await response.text());
-    return generateMockStreams(params.maxResults);
+    return [];
   }
 
   const json = (await response.json()) as YouTubeSearchApiResponse;
   console.log("[YouTube] YouTube API returned items", {
+    query,
     itemCount: json.items.length,
     videoIds: json.items.map((item) => item.id.videoId),
   });
-  return json.items.map((item) =>
-    youTubeStreamSchema.parse({
-      id: item.id.videoId,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
-      thumbnail: item.snippet.thumbnails.high?.url ?? item.snippet.thumbnails.default.url,
-      liveViewers: item.snippet.liveBroadcastContent === "live" ? Math.floor(Math.random() * 5000) + 50 : 0,
-      language: item.snippet.defaultLanguage ?? params.language ?? "en",
-      category: params.category ?? "General",
-      startedAt: item.snippet.publishedAt,
-      description: item.snippet.description,
-      tags: item.snippet.tags,
-    })
-  );
+
+  return json.items;
+}
+
+async function fetchVideoDetails(
+  videoIds: string[],
+  apiKey: string
+): Promise<Map<string, YouTubeVideoApiResponse["items"][number]>> {
+  const details = new Map<string, YouTubeVideoApiResponse["items"][number]>();
+  const chunkSize = 50;
+
+  for (let index = 0; index < videoIds.length; index += chunkSize) {
+    const chunk = videoIds.slice(index, index + chunkSize);
+    const url = new URL("https://www.googleapis.com/youtube/v3/videos");
+    url.searchParams.set("part", "snippet,liveStreamingDetails");
+    url.searchParams.set("id", chunk.join(","));
+    url.searchParams.set("key", apiKey);
+
+    console.log("[YouTube] Fetching video details", {
+      endpoint: url.origin + url.pathname,
+      ids: chunk,
+    });
+
+    const response = await fetch(url.toString(), { next: { revalidate: CACHE_TTL_MS / 1000 } });
+    if (!response.ok) {
+      console.error("[YouTube] Failed to load video details", {
+        status: response.status,
+        statusText: response.statusText,
+      });
+      continue;
+    }
+
+    const json = (await response.json()) as YouTubeVideoApiResponse;
+    for (const item of json.items) {
+      details.set(item.id, item);
+    }
+  }
+
+  return details;
 }
 
 type YouTubeSearchApiResponse = {
@@ -160,12 +295,41 @@ type YouTubeSearchApiResponse = {
       channelTitle: string;
       publishedAt: string;
       defaultLanguage?: string;
+      defaultAudioLanguage?: string;
       liveBroadcastContent: "none" | "upcoming" | "live";
       thumbnails: {
         default: { url: string };
+        medium?: { url: string };
         high?: { url: string };
       };
       tags?: string[];
+      categoryId?: string;
+    };
+  }>;
+};
+
+type YouTubeVideoApiResponse = {
+  items: Array<{
+    id: string;
+    snippet: {
+      title: string;
+      description: string;
+      channelTitle: string;
+      publishedAt: string;
+      categoryId?: string;
+      defaultLanguage?: string;
+      defaultAudioLanguage?: string;
+      tags?: string[];
+      thumbnails: {
+        default: { url: string };
+        medium?: { url: string };
+        high?: { url: string };
+      };
+    };
+    liveStreamingDetails?: {
+      actualStartTime?: string;
+      scheduledStartTime?: string;
+      concurrentViewers?: string;
     };
   }>;
 };
@@ -173,8 +337,15 @@ type YouTubeSearchApiResponse = {
 export function generateMockStreams(count = 12): YouTubeLiveStream[] {
   return Array.from({ length: count }).map((_, index) => {
     const id = `mock-stream-${index + 1}`;
-    const categories = ["Gaming", "Music", "News", "Sports"];
-    const languages = ["en", "es", "ja", "ko", "fr"];
+    const categories = [
+      "Gaming",
+      "Music",
+      "News & Politics",
+      "Sports",
+      "Science & Technology",
+      "Entertainment",
+    ];
+    const languages = ["en", "es", "ja", "ko", "fr", "pt", "de"];
     const tags = ["chill", "competitive", "analysis", "live", "vibes"];
     return youTubeStreamSchema.parse({
       id,
