@@ -6,11 +6,16 @@ import { getLiveStreams, getStreamById } from "@/lib/youtube";
 export const revalidate = 60;
 
 type WatchPageProps = {
-  params: { id: string };
+  params: { id?: string };
 };
 
 export default async function WatchPage({ params }: WatchPageProps) {
   const { id } = params;
+
+  if (!id) {
+    notFound();
+  }
+
   const stream = await getStreamById(id);
 
   if (!stream) {
