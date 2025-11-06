@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/google-auth";
 import { getAlerts, getFollows, getLayouts } from "@/lib/storage";
 import { getLiveStreams } from "@/lib/youtube";
+import { ClientLog } from "@/components/ClientLog";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export default async function AccountPage() {
   if (!user) {
     return (
       <div className="space-y-6">
+        <ClientLog label="[Account] Guest user viewed account page" />
         <section className="card space-y-3 p-6">
           <h1 className="text-2xl font-bold text-white">Account</h1>
           <p className="text-sm text-slate-300">
@@ -41,6 +43,22 @@ export default async function AccountPage() {
 
   return (
     <div className="space-y-8">
+      <ClientLog
+        label="[Account] Authenticated user context"
+        data={{
+          userRole: user.role,
+          layoutCount: layouts.length,
+          followsCount: follows.length,
+          alertsCount: alerts.length,
+        }}
+      />
+      <ClientLog
+        label="[YouTube] Account page live streams"
+        data={{
+          streamCount: streams.length,
+          streamIds: streams.map((stream) => stream.id),
+        }}
+      />
       <section className="card space-y-2 p-6">
         <h1 className="text-2xl font-bold text-white">Welcome back, {user.email}</h1>
         <p className="text-sm text-slate-300">Your current plan: <span className="text-emerald-300 uppercase">{user.role}</span></p>
